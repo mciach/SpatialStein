@@ -46,6 +46,11 @@ ssc2 = spatialShrunkenCentroids(deconv, k=3, s=3)
 image(ssc2, main = 'Deconvoluted Peak')
 ```
 
+
+
+
+
+
 ## Single ion segmentation using spatial DGMM
 
 ```{r}
@@ -97,4 +102,37 @@ ssc@resultData@listData[[1]]$cluster<-as.factor(xx)
 image(ssc, col=cbPalette[1:3], key=FALSE,asp=1, main = paste0(colnames(spec)[f+3],"Deconvolutead Peak"))
 ```
 
+## Segmentation accuracy using Gaussian Mixture Model
 
+```{r}
+tmp = ssc@resultData@listData[[1]]$class
+accu_mono <- c()
+for (i in 1:dim(mono)[1])
+{
+f = i
+set.seed(333)
+gmm<-densityMclust(spectra(mono)[i,],G=3,modelNames="E")
+relt <- table(tmp, gmm$classification)
+accu_mono[i] = sum(sort(relt,decreasing = T)[1:k])/dim(mono)[2]
+}
+#hist(accu_mono)
+
+accu_deconv <- c()
+for (i in 1:dim(deconv)[1])
+{
+f = i
+set.seed(333)
+gmm<-densityMclust(spectra(deconv)[i,],G=3,modelNames="E")
+relt <- table(tmp, gmm$classification)
+accu_deconv[i] = sum(sort(relt,decreasing = T)[1:k])/dim(deconv)[2]
+}
+#hist(accu_deconv)
+
+accu = data.frame(accuracy = c(accu_mono,accu_deconv),peak = c(rep('mono',dim(mono)[1]),rep('deconvoluted',dim(deconv)[1])))
+theme_set(
+  theme_classic() + 
+    theme(legend.position = "top")
+  )
+ggplot(data = accu, aes(accuracy))+
+  geom_histogram(aes(color = peak,fill = peak), bins = 50, alpha=0.4)
+```

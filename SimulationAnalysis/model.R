@@ -118,6 +118,7 @@ K_DGMM<-function(msset=msset,gmm=gmm,f=f,k=k,step=1e7,initialization="km",r_max=
       km<-kmeans(int,centers =k)
       mu<-km$centers
       sigma<-(mu*0.2)^2
+ 
       
     }
     
@@ -135,6 +136,7 @@ K_DGMM<-function(msset=msset,gmm=gmm,f=f,k=k,step=1e7,initialization="km",r_max=
       {
         mu<-gmm$parameters$mean
         sigma<-gmm$parameters$variance$sigmasq
+
       }
       
     }
@@ -330,7 +332,8 @@ DGMM<-function(msset=msset,w,w2=w2,k,f,sp_ratio=4,step=1e5, iteration=1000,Annl=
     mu<-sort(km$centers, decreasing = F)
     sigma<-(mu*sig)^2
     sigma[sigma<0.0006]<-0.0006
-    
+    print(mu)
+    print(sigma)
   }
   
   ##############initialize using Gaussian Mixture Model
@@ -351,9 +354,18 @@ DGMM<-function(msset=msset,w,w2=w2,k,f,sp_ratio=4,step=1e5, iteration=1000,Annl=
     {
       x2<-x[x<quantile(x)[3]+out*(quantile(x)[4]-quantile(x)[2])]
     }
-    gmm<-densityMclust(x2,G=k,modelNames="V")
+    gmm<-densityMclust(x2,G=k,modelNames="E")
+
     mu<-gmm$parameters$mean
     sigma<-gmm$parameters$variance$sigmasq
+    print(mu)
+    print(sigma)
+    #  plot(gmm,what="density",x2,breaks=50)
+    aa<-rep(0,ncol(msset))
+    
+    aa[!is.na(x) & (x<quantile(x, na.rm=TRUE)[3]+out*(quantile(x,na.rm=TRUE)[4]-quantile(x,na.rm=TRUE)[2]))]<-apply(gmm$z,1, function (x) which(x==max(x)))
+    msset$gmm<-aa
+    print(image(msset, formula = gmm~x*y,main=paste0("feature",f)))
   }
   
   ############initialize alpha in Dirichlet process
@@ -560,7 +572,7 @@ DGMM<-function(msset=msset,w,w2=w2,k,f,sp_ratio=4,step=1e5, iteration=1000,Annl=
   }
   
   msset$dgmm<-xx
-#  image(msset, formula = dgmm~x*y,asp=sp_ratio, main=paste0(f,"y"))
+ print(image(msset, formula = dgmm~x*y,asp=sp_ratio, main=paste0(f,"y")))
   
   xx<-rep(1,ncol(msset))
   if (length(rmlist)!=0)
@@ -636,10 +648,12 @@ GMM<-function(msset=msset,f=f,kmax=kmax,out=out,kprior=0)
   #####
   if (kprior==0)
   {
-    gmm<-densityMclust(x2,modelNames="V")
-    if (length(gmm$BIC)>2)
+    gmm<-densityMclust(x2,modelNames="E")
+    id = 1:length(gmm$BIC)
+    id = id[is.na(gmm$BIC)==F]
+    if (length(gmm$BIC[is.na(gmm$BIC)==F])>2)
     {
-      bic = gmm$BIC
+      bic = gmm$BIC[is.na(gmm$BIC)==F]
       ncomp <- length(bic)
       b<-c()
       b[1]<-ncomp-1
@@ -659,18 +673,22 @@ GMM<-function(msset=msset,f=f,kmax=kmax,out=out,kprior=0)
         {
           
           max_d = d
-          max_c = i
+          max_c = id[i]
         }
       }
+    }else
+    {
+      max_c = which(gmm$BIC == max(gmm$BIC,na.rm = T))
     }
   }
-  gmm<-densityMclust(x2,G=max_c,modelNames="V")
+  gmm<-densityMclust(x2,G=max_c,modelNames="E")
   #  plot(gmm,what="density",x2,breaks=50)
   aa<-rep(0,ncol(msset))
   
   aa[!is.na(x) & (x<quantile(x, na.rm=TRUE)[3]+out*(quantile(x,na.rm=TRUE)[4]-quantile(x,na.rm=TRUE)[2]))]<-apply(gmm$z,1, function (x) which(x==max(x)))
   msset$gmm<-aa
-  print(image(msset, formula = gmm~x*y,main=paste0("feature",f)))
+  aa[aa==0]<-1
+  #print(image(msset, formula = gmm~x*y,main=paste0("feature",f)))
   return(list(gmm,max_c,aa))
 }
 

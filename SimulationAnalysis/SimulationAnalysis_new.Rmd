@@ -41,6 +41,15 @@ molecule = c('PC.38.1', 'PA.44.0', 'PC.38.0')
 ```
 
 
+## Visulaization of ion image of PC.38.1
+
+```{r}
+par(mfrow = c(2,2))
+image(mono, feature = 1, contrast.enhance = 'histogram', layout = NULL, main = 'mono')
+image(deconv0.1, feature = 1, contrast.enhance = 'histogram', layout = NULL, main = 'deconv0.1')
+image(deconv0.2, feature = 1, contrast.enhance = 'histogram', layout = NULL, main = 'deconv0.2')
+
+```
 
 
 ## Single ion segmentation using spatial DGMM

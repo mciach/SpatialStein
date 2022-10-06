@@ -354,7 +354,7 @@ DGMM<-function(msset=msset,w,w2=w2,k,f,sp_ratio=4,step=1e5, iteration=1000,Annl=
     {
       x2<-x[x<quantile(x)[3]+out*(quantile(x)[4]-quantile(x)[2])]
     }
-    gmm<-densityMclust(x2,G=k,modelNames="E")
+    gmm<-densityMclust(x2,G=k,modelNames="V")
 
     mu<-gmm$parameters$mean
     sigma<-gmm$parameters$variance$sigmasq
@@ -372,7 +372,7 @@ DGMM<-function(msset=msset,w,w2=w2,k,f,sp_ratio=4,step=1e5, iteration=1000,Annl=
   
   alpha<-rep(1,k)
   ############initialize beta in PI
-  beta=1;
+  beta=5;
   K<-k
   #########step size
   eta<-min(mu)/step
@@ -450,7 +450,7 @@ DGMM<-function(msset=msset,w,w2=w2,k,f,sp_ratio=4,step=1e5, iteration=1000,Annl=
       logpx[,j]<-log(1/(2* pi )^0.5*1/sigma[j]^0.5)-(x-mu[j])^2/2/sigma[j]
     }
     ##posterior
-    
+    px<-px/rowSums(px)
     
     y<-px*PI/rowSums(px*PI)
     y[is.na(y)==TRUE]<-runif(length(y[is.na(y)==TRUE]),0,1)
@@ -586,7 +586,7 @@ DGMM<-function(msset=msset,w,w2=w2,k,f,sp_ratio=4,step=1e5, iteration=1000,Annl=
   msset$dgmm<-xx
 #  image(msset, formula = dgmm~x*y,asp=sp_ratio, main=paste0(f,"ybar"))
   
-  return(list(mu,sigma,alpha,beta,mutrace,sigtrace,alphatrace,betatrace,loglik,y))
+  return(list(mu,sigma,alpha,beta,mutrace,sigtrace,alphatrace,betatrace,loglik,y, xx))
 }
 
 
@@ -633,6 +633,8 @@ GMM<-function(msset=msset,f=f,kmax=kmax,out=out,kprior=0)
   
   lod<-0
   x<-spectra(msset)[f,]
+  #x = x - min(x)
+  #x = log(x+1)
   ###leave out pixels with intensity lower than LOD and outliers
   if (length(x[x==min(x)])/ncol(msset)>0.01)
   {
@@ -648,7 +650,7 @@ GMM<-function(msset=msset,f=f,kmax=kmax,out=out,kprior=0)
   #####
   if (kprior==0)
   {
-    gmm<-densityMclust(x2,modelNames="E")
+    gmm<-densityMclust(x2,modelNames="V")
     id = 1:length(gmm$BIC)
     id = id[is.na(gmm$BIC)==F]
     if (length(gmm$BIC[is.na(gmm$BIC)==F])>2)
@@ -680,8 +682,11 @@ GMM<-function(msset=msset,f=f,kmax=kmax,out=out,kprior=0)
     {
       max_c = which(gmm$BIC == max(gmm$BIC,na.rm = T))
     }
+  }else
+  {
+    max_c = kprior
   }
-  gmm<-densityMclust(x2,G=max_c,modelNames="E")
+  gmm<-densityMclust(x2,G=max_c,modelNames="V")
   #  plot(gmm,what="density",x2,breaks=50)
   aa<-rep(0,ncol(msset))
   

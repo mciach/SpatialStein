@@ -40,7 +40,7 @@ def profile_ion_image(image, mz, normalize=True):
     Returns an array of signal intensities at a given mz point from an MS image
     with spectra in profile mode.
     Uses a linear interpolation.
-    Optionally, the intensity can be extracted after applying a gaussian filter with a given sigma.  
+    Optionally, each pixel spectrum can be normalized to unit area under curve. 
     """
     max_coord = max(image.coordinates)[:2]
     min_coord = min(image.coordinates)[:2]

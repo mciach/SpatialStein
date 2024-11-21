@@ -98,6 +98,8 @@ def segment_average_spectra(image, segment_mask, mass_axis):
     while segment_mask needs to be array-indexed (i.e. segment_mask[0, 0] is the bottom-left corner)
     This is the default behavior if image is from ImzMLParser and segment_mask is plotted using plt.imshow.
     Image needs to be in profile mode. Spectra will be resampled in the points of the mass_axis.
+    Spectra are normalized by TIC before summing within segments, and normalized by segment counts subsequently. 
+    So basically everything is normalized correctly so that the output is bona fide average in segments.
     """
     segment_counter = Counter(segment_mask.flatten())
     segments = sorted(set(segment_counter))

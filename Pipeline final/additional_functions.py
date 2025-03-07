@@ -150,14 +150,14 @@ def total_spectrum(image, mass_axis, mask=None, normalize_spectra=True):
     #print('skipped', skipped)
     return total_intensity
 
-def analyze_image(image, reference_spectra, MTD, MTD_th, 
-                  analyzed_mass_range=None, mask=None, verbose=False, 
+def analyze_image(image, reference_spectra, MTD, MTD_th, mask=None, analyzed_mass_range = None, verbose=False, 
                   **maserstein_kwargs):
     """
     Performs a Wasserstein regression of the reference spectra against all pixel spectra of the image,
-    ignoring coordinates for which mask = 0. 
-    Truncates the spectra to the analyzed mass range to speed up computations. 
+    ignoring coordinates for which mask = 0 (if supplied). 
     Returns a 3D array of estimated proportions. 
+    The image is assumed to be in centroided mode. 
+    All spectra are TIC-normalized prior to deconvolution.  
     """
     # Get the image shape:
     i_coord_max = max(ycoord for xcoord,ycoord,zcoord in image.coordinates) 
@@ -166,26 +166,43 @@ def analyze_image(image, reference_spectra, MTD, MTD_th,
     j_coord_max = max(xcoord for xcoord,ycoord,zcoord in image.coordinates) 
     j_coord_min = min(xcoord for xcoord,ycoord,zcoord in image.coordinates) 
     j_range = j_coord_max - j_coord_min + 1
+    
+    # Get the mass range of the reference spectra 
+    min_mz = min(s.confs[0][0] for s in reference_spectra) - 1
+    max_mz = max(s.confs[-1][0] for s in reference_spectra) + 2
+    
+    # Deconvolve
     proportion_images = np.zeros((i_range, j_range, len(reference_spectra)))
     for idx, (xcoord,ycoord,zcoord) in enumerate(image.coordinates):
         if verbose and not idx % 1000:
             print('Processing pixel number', idx)
         if mask is not None and mask[ycoord-1, xcoord-1] == 0: 
             continue
-        # Get the pixel spectrum data and truncate
+        # Get the pixel spectrum data 
         mz, intsy = image.getspectrum(idx)
+        
+        # Truncate the pixel spectrum to the range of the reference spectra
         if analyzed_mass_range is not None:
-            selected_range = (analyzed_mass_range[0] <= mz)*(mz <= analyzed_mass_range[1])
+            full_tic = sum(intsy)
+            selected_range = (min_mz <= mz)*(mz <= max_mz)
             mz = mz[selected_range]
             intsy = intsy[selected_range]
+            partial_tic = sum(intsy) 
+            
         # Create a spectrum object, normalize for regression purposes
         pixel_spectrum = Spectrum(confs=list(zip(mz, intsy)))
         pixel_spectrum.normalize()
-        # Regress
+        
+        # Regression
         regression = estimate_proportions(pixel_spectrum, reference_spectra, 
                                           MTD=MTD, MTD_th=MTD_th, 
                                           progress=False, **maserstein_kwargs)
         pr_array = np.array(regression['proportions'])
+        
+        if analyzed_mass_range is not None:
+            # Rescale the proportions so that they reflect the proportion of the signal
+            # in the full spectrum, not just the truncated part
+            pr_array *= partial_tic/full_tic
         proportion_images[ycoord-1, xcoord-1, ...] = pr_array
     return proportion_images
 

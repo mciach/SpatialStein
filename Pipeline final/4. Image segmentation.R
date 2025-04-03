@@ -1,24 +1,30 @@
 library(Cardinal)
+library(here)
 set.seed(2025, kind="L'Ecuyer-CMRG")
 setCardinalParallel(12)
 
 ### Input:
 # Input the path to the data directory and the MSI filenames here:
-data_dir <- './' 
-filenames <- c('cerebellum_deconvolved_image.imzML', 'bladder_deconvolved_image.imzML')
-filenames <- paste0(data_dir, filenames)
+data_dir <- here() 
+filenames <- c('lipid_MSI_deconvolved.imzML', 
+               'cerebellum_deconvolved_image.imzML', 
+               'bladder_deconvolved_image.imzML')
+paths <- paste(data_dir, filenames, sep='/')
 
 ### Loading the data:
-images <- lapply(filenames, readMSIData)
+msi_images <- lapply(filenames, readMSIData)
 # Visualizing to verify proper loading:
-image(images[[1]], mz=755.47, scale=T)
-image(images[[1]], i=15, scale=T)
-image(images[[2]], i=1:12, scale=T)
+image(msi_images[[1]], i=1:3)
+image(msi_images[[2]], mz=755.47, scale=T)
+image(msi_images[[2]], i=15, scale=T)
+image(msi_images[[3]], i=1:12, scale=T)
 
 ### Checking the segmentation for different values of the r parameter
-test_sdgmm <- spatialDGMM(images[[1]], i=10:15, r=4, k=4, annealing=F)
+test_sdgmm <- spatialDGMM(msi_images[[1]], r=5, k=2, annealing=T)
+image(test_sdgmm, i=1:3)
+test_sdgmm <- spatialDGMM(msi_images[[2]], i=10:15, r=4, k=4, annealing=F)
 image(test_sdgmm, i=1:6)
-test_sdgmm <- spatialDGMM(images[[2]], i=1:12, r=6, k=2)
+test_sdgmm <- spatialDGMM(msi_images[[3]], i=1:12, r=6, k=2)
 image(test_sdgmm, i=1:12)
 
 ### Segmentation:

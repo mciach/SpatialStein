@@ -1,13 +1,15 @@
 library(Cardinal)
 set.seed(2025, kind="L'Ecuyer-CMRG")
-setCardinalParallel(12)  # using 12 cores
+setCardinalParallel(16)  # using 16 cores
 
 ### Input:
 # Input the path to the data directory and the MSI filenames here:
-data_dir <- './Results/'
+data_dir <- './Deconvolved data/'
 filenames <- c('lipid_MSI_deconvolved.imzML', 
-               'cerebellum_deconvolved_image.imzML', 
-               'bladder_deconvolved_image.imzML')
+               'mouse cerebellum deconvolved image.imzML', 
+               'mouse bladder deconvolved image.imzML',
+               'mouse brain deconvolved image.imzML')
+result_dir <- './Segmentation maps/'
 paths <- paste(data_dir, filenames, sep='')
 
 ### Loading the data:
@@ -22,6 +24,7 @@ image(msi_data_list[[1]], i=1:3)
 image(msi_data_list[[2]], mz=755.47, scale=T)
 image(msi_data_list[[2]], i=1:12, scale=T)
 image(msi_data_list[[3]], i=1:12, scale=T)
+image(msi_data_list[[4]], i=60:66, scale=T)
 
 ### Checking the segmentation for different values of the r parameter
 test_sdgmm <- spatialDGMM(msi_data_list[[1]], r=3, k=2, annealing=F, beta=6)
@@ -37,31 +40,44 @@ test_sdgmm <- spatialDGMM(msi_data_list[[3]], i=1:12,
                           annealing=F, compress=F)
 image(test_sdgmm, i=1:12)
 
+image(msi_data_list[[4]], i=9:13, scale=T)
+test_sdgmm <- spatialDGMM(msi_data_list[[4]], i=9:13, 
+                          r=5, k=2, beta=8,
+                          annealing=F, compress=F)
+image(test_sdgmm, i=1:5)
+
 # image(normalized_data[[3]], i=1:12, scale=T)
 # test_sdgmm <- spatialDGMM(normalized_data[[3]], i=1:6, r=8, k=2, annealing=F, beta=20)
 
 ### Segmentation:
 # spatialDGMM parameters for each image need to be specified manually here:
-r_values <- c(3, 1, 3)  
-beta_values <- c(6, 4, 6)
-k_values <- c(2, 2, 2)
+r_values <- c(3, 1, 3, 5)  
+beta_values <- c(6, 4, 6, 8)
+k_values <- c(2, 2, 2, 2)
 sdgmm_list <- list()
+processing_times <- list()
 for(img_id in 1:length(filenames)){
+  start.time <- Sys.time()
   sdgmm_list[[img_id]] <- spatialDGMM(msi_data_list[[img_id]], 
                                       r=r_values[img_id], 
                                       k=k_values[img_id],
                                       beta = beta_values[img_id],
                                       annealing = F,
                                       compress = F)
+  end.time <- Sys.time()
+  time.taken <- end.time - start.time
+  processing_times[[img_id]] <- time.taken
 }
+
 # Visualizing to verify a proper segmentation:
 image(sdgmm_list[[2]], i=1:12)
 plot(sdgmm_list[[2]], i=3)
 image(sdgmm_list[[3]], i=1:44)
+image(sdgmm_list[[4]], i=6:14)
 
 ### Saving the results
 # Saving the spatialdgmm objects for the segmentation of all MSI data sets:  
-save(sdgmm_list, file='sdgmm_segmentation_results.RData')
+save(sdgmm_list, file=paste(result_dir, '/sdgmm_segmentation_results.RData', sep=''))
 
 # Saving the spatialdgmm maps as arrays (optional, more portable between tools):
 sdgmm_map_list <- list()
@@ -77,7 +93,7 @@ for(i in 1:length(filenames)){
 
 for(img_id in 1:length(filenames)){
   write.table(sdgmm_map_list[[img_id]], 
-              file = paste(data_dir, sub('\\..*', '', filenames[img_id]), 
-                           '_spatialdgmm_map.csv', sep=''),
+              file = paste(result_dir, sub('\\..*', '', filenames[img_id]), 
+                           ' spatialdgmm map.csv', sep=''),
               row.names=F, col.names=F, sep='\t')
 }

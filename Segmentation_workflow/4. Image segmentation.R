@@ -77,7 +77,7 @@ image(sdgmm_list[[4]], i=6:14)
 
 ### Saving the results
 # Saving the spatialdgmm objects for the segmentation of all MSI data sets:  
-save(sdgmm_list, file=paste(result_dir, '/sdgmm_segmentation_results.RData', sep=''))
+save(sdgmm_list, file=paste(result_dir, 'sdgmm_segmentation_results.RData', sep=''))
 
 # Saving the spatialdgmm maps as arrays (optional, more portable between tools):
 sdgmm_map_list <- list()

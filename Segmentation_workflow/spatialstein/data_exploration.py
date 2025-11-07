@@ -148,7 +148,7 @@ def profile_ion_image(msi, mz, normalize=True):
     return ion_image
 
 
-def centroided_ion_image(msi, mz, delta=0.01, normalize=True):
+def centroided_ion_image(msi, mz_list, delta=0.01, normalize=True, verbose=False):
     """
     Returns an array of signal intensities at a given mz point from an MSI
     data set with spectra in centroided mode.
@@ -159,24 +159,59 @@ def centroided_ion_image(msi, mz, delta=0.01, normalize=True):
     min_coord = min(msi.coordinates)[:2]
     image_shape = (max_coord[1] - min_coord[1] + 1, max_coord[0] - min_coord[0] + 1)
     #print(image_shape)
-    ion_image = np.zeros(image_shape)
+    ion_images = np.zeros(image_shape + (len(mz_list),))
+    distance_images = np.zeros(image_shape + (len(mz_list),)) + np.inf
     for idx, (xcoord,ycoord,zcoord) in enumerate(msi.coordinates):
+        if verbose:
+            if not idx % 10000:
+                print(idx)
         mz_array, intsy =  msi.getspectrum(idx)
         if normalize:
             intsy = intsy / np.sum(intsy)
         assert all(nx>pr for nx, pr in zip(mz_array[1:], mz_array)), 'MZ array is not sorted'
-        nbh = np.searchsorted(mz_array, mz)
-        if nbh==0:
-            if abs(mz - mz_array[0]) <= delta:
-                ion_image[ycoord-1, xcoord-1] = intsy[0]
-        elif nbh==len(mz_array):
-            if abs(mz - mz_array[-1]) <= delta:
-                ion_image[ycoord-1, xcoord-1] = intsy[-1]
-        else:
-            l, r = mz_array[nbh-1], mz_array[nbh]
-            if mz - l < r - mz:
-                # left neighbour is the closest one; update the closest neighbour index
-                nbh -= 1
-            if abs(mz - mz_array[nbh]) <= delta:
-                ion_image[ycoord-1, xcoord-1] = intsy[nbh]
-    return ion_image
+        nbh_list = np.searchsorted(mz_array, mz_list)
+        for mz_id, nbh in enumerate(nbh_list):
+            mz = mz_list[mz_id]
+            if nbh==0:
+                if abs(mz - mz_array[0]) <= delta:
+                    ion_images[ycoord-1, xcoord-1, mz_id] = intsy[0]
+                    distance_images[ycoord-1, xcoord-1, mz_id] = mz - mz_array[0]
+            elif nbh==len(mz_array):
+                if abs(mz - mz_array[-1]) <= delta:
+                    ion_images[ycoord-1, xcoord-1, mz_id] = intsy[-1]
+                    distance_images[ycoord-1, xcoord-1, mz_id] = mz - mz_array[-1]
+            else:
+                l, r = mz_array[nbh-1], mz_array[nbh]
+                if mz - l < r - mz:
+                    # left neighbour is the closest one; update the closest neighbour index
+                    nbh -= 1
+                if abs(mz - mz_array[nbh]) <= delta:
+                    ion_images[ycoord-1, xcoord-1, mz_id] = intsy[nbh]
+                    distance_images[ycoord-1, xcoord-1, mz_id] = mz - mz_array[nbh]
+    return (ion_images, distance_images)
+
+
+def _check_pixel(idx, mz_array, intsy, mz, delta, normalize):
+    signal = 0
+    dist = 0
+    if normalize:
+        intsy = intsy / np.sum(intsy)
+    assert all(nx>pr for nx, pr in zip(mz_array[1:], mz_array)), 'MZ array is not sorted'
+    nbh = np.searchsorted(mz_array, mz)
+    if nbh==0:
+        if abs(mz - mz_array[0]) <= delta:
+            signal = intsy[0]
+            dist = mz - mz_array[0]
+    elif nbh==len(mz_array):
+        if abs(mz - mz_array[-1]) <= delta:
+            signal = intsy[-1]
+            dist = mz - mz_array[-1]
+    else:
+        l, r = mz_array[nbh-1], mz_array[nbh]
+        if mz - l < r - mz:
+            # left neighbour is the closest one; update the closest neighbour index
+            nbh -= 1
+        if abs(mz - mz_array[nbh]) <= delta:
+            signal = intsy[nbh]
+            dist = mz - mz_array[nbh]
+    return(idx, signal, dist)

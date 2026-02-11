@@ -21,8 +21,8 @@ The annotation results, deconvolved images, and segmentation maps described in t
 https://zenodo.org/records/18613414
 ```
 In order to reproduce these results, download the mouse bladder and cerebellum data sets:
-    - Mouse bladder:   https://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=PXD001283
-    - Mouse cerebellum:   https://www.ebi.ac.uk/metabolights/editor/MTBLS487
+     - Mouse bladder:   https://proteomecentral.proteomexchange.org/cgi/GetDataset?ID=PXD001283
+     - Mouse cerebellum:   https://www.ebi.ac.uk/metabolights/editor/MTBLS487
 Next, extract the archives if necessary and place the imzML images in the Data directory of `Segmentation workflow`. 
 The scripts in `Segmentation workflow` are prepared so that they can be used directly on these data sets. 
 
